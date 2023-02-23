@@ -49,6 +49,7 @@ class Ui_MainWindow(object):
         self.DocumentsLabel.setObjectName("DocumentsLabel")
         self.verticalLayout.addWidget(self.DocumentsLabel)
         self.DocumentsList = QtWidgets.QListWidget(self.centralwidget)
+        self.DocumentsList.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.DocumentsList.setObjectName("DocumentsList")
         self.verticalLayout.addWidget(self.DocumentsList)
         self.DetailsBox = QtWidgets.QGroupBox(self.centralwidget)

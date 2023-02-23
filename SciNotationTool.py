@@ -6,11 +6,13 @@ from PyQt5.QtCore import Qt
 
 from ui_MainWindow import Ui_MainWindow
 
+
 #Constants
 wdFindContinue = 1
 wdCharacter = 1
 wdToggle = 9999998
 wdCollapseEnd = 0
+
 
 class EtoSciApp(QMainWindow):
     def __init__(self):
@@ -18,37 +20,60 @@ class EtoSciApp(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        app.applicationStateChanged.connect(self.onWindowActivated)
         self.ui.DoBtn.clicked.connect(self.EtoSciNotation)
         self.ui.OnTopCheckBox.stateChanged.connect(self.SetOnTop)
-        self.ui.DocumentsList.currentRowChanged.connect(self.ShowDetails)
-        app.focusWindowChanged.connect(self.on_FocusChange)
-        
-        self.word = client.Dispatch("Word.Application")
-        self.DocList = self.word.Documents
-        self.FindDocs()        
 
-    def on_FocusChange(self):
-        if self.isActiveWindow():
+        #Signal currentRowChange has a bug when application lost and regained focus so use itemSelectionChanged instead
+        #self.ui.DocumentsList.currentRowChanged.connect(self.onSelectDoc)
+        self.ui.DocumentsList.itemSelectionChanged.connect(self.onSelectDoc)
+
+        self.FindDocs()
+
+
+    def onWindowActivated(self,newstate):
+    #When Application got focus rebuild documents list
+        if newstate == Qt.ApplicationState.ApplicationActive:
             self.FindDocs()
 
+
     def FindDocs(self):
+    #Rebuild documents list
         self.ui.DocumentsList.blockSignals(True)
         self.ui.FNameLabel.setText("...")
         self.ui.PathLabel.setText("...")
         self.ui.DocumentsList.clear()
+        #At this time no document selected yet so set Do Button disabled
+        self.ui.DocumentsList.setCurrentRow(-1)
+        self.ui.DoBtn.setEnabled(False)
+        
+        #check if Word Application is running. If it's not just return with clear list
+        try:
+            self.word = client.GetActiveObject("Word.Application")
+            self.DocList = self.word.Documents
+        except:
+            return
+
         if self.DocList:
             for doc in self.DocList:
                 self.ui.DocumentsList.addItem(path.splitext(doc.Name)[0])
         self.ui.DocumentsList.blockSignals(False)
 
-    def ShowDetails(self):
-        selnum = self.ui.DocumentsList.currentRow()
-        self.ui.FNameLabel.setText(self.DocList[selnum].Name)
-        self.ui.PathLabel.setText(self.DocList[selnum].FullName)
-        pass
-        
 
-    def EtoSciNotation(self):        
+    def onSelectDoc(self):
+    #When document selected show details and set Do Button enabled
+        selnum = self.ui.DocumentsList.currentRow()
+        if selnum == -1:
+            self.ui.FNameLabel.setText("...")
+            self.ui.PathLabel.setText("...")
+            self.ui.DoBtn.setEnabled(False)
+        else:
+            self.ui.FNameLabel.setText(self.DocList[selnum].Name)
+            self.ui.PathLabel.setText(self.DocList[selnum].FullName)
+            self.ui.DoBtn.setEnabled(True)
+
+
+    def EtoSciNotation(self):
         selnum = self.ui.DocumentsList.currentRow()
         self.word.Documents[selnum].Activate()
         self.word.Selection.Find.ClearFormatting()
@@ -82,7 +107,7 @@ class EtoSciApp(QMainWindow):
             #Converting the selection into float and back to string. Therefore deleting all heading zeros and symbol +
             self.word.Selection.Text = float(self.word.Selection.Text)
 
-            #Converting selected text into superscript            
+            #Converting selected text into superscript
             self.word.Selection.Font.Superscript = wdToggle
 
             self.word.Selection.InsertBefore ("·10")
@@ -92,16 +117,16 @@ class EtoSciApp(QMainWindow):
             sel.Execute()
 
 
-    def SetOnTop(self):         
+    def SetOnTop(self):
         flags = self.windowFlags()
-        flags |= Qt.CustomizeWindowHint            
+        flags |= Qt.CustomizeWindowHint
         if self.ui.OnTopCheckBox.checkState():
-            flags |= Qt.WindowStaysOnTopHint    
+            flags |= Qt.WindowStaysOnTopHint
         else:
             flags &= ~Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
         self.show()
-        
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

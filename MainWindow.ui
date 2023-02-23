@@ -52,7 +52,11 @@ QPushButton:pressed {
      </widget>
     </item>
     <item>
-     <widget class="QListWidget" name="DocumentsList"/>
+     <widget class="QListWidget" name="DocumentsList">
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectRows</enum>
+      </property>
+     </widget>
     </item>
     <item>
      <widget class="QGroupBox" name="DetailsBox">
